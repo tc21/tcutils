@@ -1,0 +1,13 @@
+install.sh
+.mypy_cache
+.vscode
+*.egg-info
+__pycache__
+*.db
+*.pickle
+*test*.py
+
+tc/utils/images.py
+tc/utils/avutils.py
+tc/security/encrypt.py
+tc/firefox
