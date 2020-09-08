@@ -124,7 +124,6 @@ class ReadOnlyManager:
                     comics.author,
                     comics.category,
                     comics.display_title,
-                    comics.display_author,
                     comics.loved,
                     comics.disliked,
                     comics.date_added,
@@ -142,7 +141,7 @@ class ReadOnlyManager:
             {      'disliked = 0 AND ' if not show_disliked else '' }
             {      'loved = 1 AND ' if loved_only else '' }
             {   '''(comics.display_title COLLATE UTF8_GENERAL_CI LIKE ? OR
-                        comics.display_author COLLATE UTF8_GENERAL_CI LIKE ? OR
+                        comics.author COLLATE UTF8_GENERAL_CI LIKE ? OR
                         tags.name = ?) AND '''
                     if search_string is not None else '' }
                     active = 1
@@ -162,7 +161,7 @@ class ReadOnlyManager:
 
             # for rowid, *row in result:
             for rowid, *data, tag_string in result:
-                assert len(data) == 10
+                assert len(data) == 9
                 tags = tag_string.split(',') if tag_string is not None else []
                 comic = Comic(data, tags, rowid)
 
@@ -172,7 +171,7 @@ class ReadOnlyManager:
                 # comic = Comic(row, tags, rowid)
                 comics.append(comic)
                 category_dict[comic.category] += 1
-                author_dict[comic.display_author] += 1
+                author_dict[comic.author] += 1
                 for tag in comic.tags:
                     tag_dict[tag] += 1
 
@@ -180,7 +179,10 @@ class ReadOnlyManager:
 
     def get_comic(self, rowid) -> Optional[Comic]:
         with tcsql.connect(self.library_path) as manager:
-            result = manager.execute(f'SELECT * FROM comics WHERE rowid = {rowid}')
+            result = manager.execute(
+                f'''SELECT folder, unique_name, title, author, category,
+                           display_title, loved, disliked, date_added
+                    FROM comics WHERE rowid = {rowid}''')
             if len(result) == 0:
                 return None
             return Comic(result[0], self._get_tags(rowid), rowid)
@@ -259,6 +261,7 @@ class ReadOnlyManager:
 
 class Comic:
     def __init__(self, data: List[str], tags: List[str], comicid: int):
+        print(data)
         self.comicid = comicid
         self.folder = data[0]
         self.unique_name = data[1]
@@ -266,10 +269,9 @@ class Comic:
         self.author = data[3]
         self.category = data[4]
         self.display_title = data[5] or self.title
-        self.display_author = data[6] or self.author
-        self.loved = data[7] == 1
-        self.disliked = data[8] == 1
-        self.date_added = data[9][:10]
+        self.loved = data[6] == 1
+        self.disliked = data[7] == 1
+        self.date_added = data[8][:10]
         self.tags = tags
 
     def __repr__(self):
@@ -277,16 +279,16 @@ class Comic:
 
     def get_sort_key(self, primary_key: str) -> Iterable[Any]:
         if primary_key == 'title':
-            return (self.display_title.lower(), self.display_author.lower())
+            return (self.display_title.lower(), self.author.lower())
         if primary_key == 'category':
-            return (self.category.lower(), self.display_author.lower(), self.display_title.lower())
+            return (self.category.lower(), self.author.lower(), self.display_title.lower())
         if primary_key == 'random':
             return (random.random(),)
         if primary_key == 'date added':
             dt = datetime.datetime.strptime(self.date_added, '%Y-%m-%d')
-            return (-dt.toordinal(), self.display_author.lower(), self.display_title.lower())
+            return (-dt.toordinal(), self.author.lower(), self.display_title.lower())
 
-        return (self.display_author.lower(), self.display_title.lower())
+        return (self.author.lower(), self.display_title.lower())
 
 
 class MissingTagError(Exception):
