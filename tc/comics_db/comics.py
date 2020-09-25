@@ -261,7 +261,6 @@ class ReadOnlyManager:
 
 class Comic:
     def __init__(self, data: List[str], tags: List[str], comicid: int):
-        print(data)
         self.comicid = comicid
         self.folder = data[0]
         self.unique_name = data[1]
