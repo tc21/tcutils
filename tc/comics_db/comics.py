@@ -109,7 +109,6 @@ class ReadOnlyManager:
         categories: List[str] = [],
         authors: List[str] = [],
         tags: List[str] = [],
-        show_disliked=False,
         loved_only=False
     ) -> Tuple[List[Comic], Dict[str, int], Dict[str, int], Dict[str, int]]:
         ''' returns a 4-tuple ([comics], {category_name: id}, {author_name: id}, {tag_name: id})
@@ -125,7 +124,6 @@ class ReadOnlyManager:
                     comics.category,
                     comics.display_title,
                     comics.loved,
-                    comics.disliked,
                     comics.date_added,
                     group_concat(tags.name)
                 FROM
@@ -138,7 +136,6 @@ class ReadOnlyManager:
             {     f'comics.category IN {tcsql.question_marks(len(categories))} AND ' if categories != [] else '' }
             {     f'comics.author IN {tcsql.question_marks(len(authors))} AND ' if authors != [] else '' }
             {     f'tags.name IN {tcsql.question_marks(len(tags))} AND ' if tags != [] else ''}
-            {      'disliked = 0 AND ' if not show_disliked else '' }
             {      'loved = 1 AND ' if loved_only else '' }
             {   '''(comics.display_title COLLATE UTF8_GENERAL_CI LIKE ? OR
                         comics.author COLLATE UTF8_GENERAL_CI LIKE ? OR
@@ -161,7 +158,7 @@ class ReadOnlyManager:
 
             # for rowid, *row in result:
             for rowid, *data, tag_string in result:
-                assert len(data) == 9
+                assert len(data) == 8
                 tags = tag_string.split(',') if tag_string is not None else []
                 comic = Comic(data, tags, rowid)
 
@@ -181,7 +178,7 @@ class ReadOnlyManager:
         with tcsql.connect(self.library_path) as manager:
             result = manager.execute(
                 f'''SELECT folder, unique_name, title, author, category,
-                           display_title, loved, disliked, date_added
+                           display_title, loved, date_added
                     FROM comics WHERE rowid = {rowid}''')
             if len(result) == 0:
                 return None
@@ -269,8 +266,7 @@ class Comic:
         self.category = data[4]
         self.display_title = data[5] or self.title
         self.loved = data[6] == 1
-        self.disliked = data[7] == 1
-        self.date_added = data[8][:10]
+        self.date_added = data[7][:10]
         self.tags = tags
 
     def __repr__(self):
