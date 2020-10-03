@@ -139,19 +139,23 @@ def organize_subcomics(
     folder: str,
     spec: Union[SubcomicSpec, SubcomicSpecification],
     offset: int = 0,
+    naming_offset: Optional[int] = None,
     dry_run = False
 ):
     '''Organizes items in a folder to indexed subfolders.
 
     For documentation, see `SubcomicSpecification.parse(spec: SubcomicSpec)`
     '''
+    if naming_offset is None:
+        naming_offset = offset
+
     if not isinstance(spec, SubcomicSpecification):
         spec = SubcomicSpecification.parse(spec)
 
     file_list = tc.utils.listdir(folder)
 
     for info in spec:
-        new_folder_name = tc.utils.sanitize_filename(f'{info.start + offset} - {info.name}')
+        new_folder_name = tc.utils.sanitize_filename(f'{info.start + naming_offset} - {info.name}')
         new_folder = os.path.join(folder, new_folder_name)
         if dry_run:
             print(f'will create folder {new_folder_name}')

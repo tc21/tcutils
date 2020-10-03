@@ -215,7 +215,8 @@ def move(
     folder: str = None,
     name: str = None,
     filename: str = None,  # equivalent to `name`, kept for compatibility reasons
-    auto_rename=True
+    auto_rename=True,
+    makedirs=False,
 ) -> str:
     '''Moves a file or folder.
 
@@ -255,6 +256,9 @@ def move(
         return file_or_folder
 
     target_name = alternative_filename(target_name)
+
+    if makedirs and not os.path.exists(os.path.dirname(target_name)):
+        os.makedirs(os.path.dirname(target_name))
 
     os.rename(file_or_folder, target_name)
     print(f'moved {file_or_folder} -> {target_name}', file=sys.stderr)
