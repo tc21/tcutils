@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-import tc.utils
-from typing import Union, List, Tuple, Iterable, Generator, Optional, Collection
 import os
+from dataclasses import dataclass
+from typing import Iterable, List, Optional, Tuple, Union
+
+import tc.utils
 from .comic import Comic
 
 
@@ -49,7 +50,7 @@ class SubcomicSpecification:
         spec = list(spec)
         for i in range(len(spec) - 1):
             if spec[i].end is None:
-               spec[i].end = spec[i+1].start - 1
+                spec[i].end = spec[i+1].start - 1
 
         self.spec = [s for s in spec if s.name != '']
 
@@ -129,9 +130,9 @@ class SubcomicSpecification:
         # note: mypy: the types here aren't statically guaranteed, but by convention
         if len(spec) >= 2 and isinstance(spec[1], str):
             # spec: List[PageSpec, str, PageSpec, str, ...]
-            return cls(SubcomicInfo.parse(spec[i], spec[i+1]) for i in range(0, len(spec), 2)) # type: ignore
+            return cls(SubcomicInfo.parse(spec[i], spec[i+1]) for i in range(0, len(spec), 2))  # type: ignore
 
-        spec_: List[Tuple[PageSpec, str]] = spec # type: ignore
+        spec_: List[Tuple[PageSpec, str]] = spec  # type: ignore
         return cls(SubcomicInfo.parse(page_spec, name) for page_spec, name in spec_)
 
 
@@ -140,7 +141,7 @@ def organize_subcomics(
     spec: Union[SubcomicSpec, SubcomicSpecification],
     offset: int = 0,
     naming_offset: Optional[int] = None,
-    dry_run = False
+    dry_run=False
 ):
     '''Organizes items in a folder to indexed subfolders.
 
@@ -175,7 +176,7 @@ def organize_subcomics_with_artists(
     spec: Union[SubcomicSpec, SubcomicSpecification],
     offset: int = 0,
     universal_suffix: str = '',
-    dry_run = False
+    dry_run=False
 ):
     '''Organizes items in a folder into a hierarchical structure.
 

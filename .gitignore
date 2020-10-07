@@ -1,6 +1,7 @@
 install.sh
 .mypy_cache
 .vscode
+.idea
 *.egg-info
 __pycache__
 *.db

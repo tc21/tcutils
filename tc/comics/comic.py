@@ -164,14 +164,13 @@ def get_info(path: str) -> Tuple[Optional[str], Optional[str]]:
             return None, None
     else:
         basename = os.path.basename(path)
-        title = basename[:-4]
-        ext = basename[-4:]
+        title, _ = os.path.splitext(basename)
         comic = Comic(title)
         formatted_name = comic.suggested_name()
         return comic.author, formatted_name
 
 
-def organize(path: str=os.path.curdir, force_all=False):
+def organize(path: str = os.path.curdir, force_all=False):
     '''Organizes all items identified as a comic in the current directory.
 
     To be successfully identified as a comic, it must contain an `info.json` or

@@ -1,10 +1,11 @@
+from typing import Callable, Type
+
 import win32.win32api as wapi
+
 from tc.utils.winutils_toast import ToastNotifier
 
-from typing import Iterable, Callable
 
-
-def prompt_errors(*errors: Exception) -> Callable:
+def prompt_errors(*errors: Type[Exception]) -> Callable:
     ''' Prompts specified errors using a Windows MessageBox when calling a function.
 
         Usage:

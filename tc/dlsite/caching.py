@@ -29,7 +29,7 @@ _query_fields: List[str] = [
 ]
 _query_columns: List[str] = [_query_primary_key] + _query_fields
 
-_auxiliary_info: List[Tuple[str, str, str]]  = [
+_auxiliary_info: List[Tuple[str, str, str]] = [
     # local_key_name, database_table_name, database_field_name
     (_taglist, _tag_table, _tag),
     (_sampleimages, _sample_images_table, _sample_image_url),

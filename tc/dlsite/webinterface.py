@@ -1,12 +1,11 @@
-import re
 import datetime
+import re
 import urllib.request
-from . import caching
-import bs4
+from typing import Any, Dict, Optional
 from urllib.error import URLError
-import requests
 
-from typing import Dict, Any, Optional
+import bs4
+import requests
 
 _code = 'code'
 _maker = 'maker'
@@ -72,7 +71,7 @@ def get_info(code: str) -> Dict[str, Any]:
     # parsed from the 販売日 field
     releasedate_string = page.find('a', href=re.compile(r'dlsite.com/\w+/new/=/year/\d+/mon/\d+/day/')).string
     releasedate_string = releasedate_string[:releasedate_string.find('日')+1]
-    info[_releasedate] = datetime.datetime.strptime(releasedate_string, '%Y年%m月%d日').date()  #note: datetime object
+    info[_releasedate] = datetime.datetime.strptime(releasedate_string, '%Y年%m月%d日').date()  # note: datetime object
 
     # parsed from the 年齢指定 field
     agerestriction_string = page.find('div', attrs={'class': 'work_genre'}).string

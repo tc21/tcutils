@@ -1,4 +1,4 @@
-from typing import List, Union, Optional, Iterable, Any, List, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 
 def format_dict(d: dict) -> str:
@@ -226,7 +226,7 @@ def color(s: str, color='default') -> str:
 
     aliases = {
         '': 'white',
-        'b': 'black',
+        'k': 'black',
         'r': 'red',
         'g': 'green',
         'y': 'yellow',

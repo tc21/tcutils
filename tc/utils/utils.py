@@ -1,6 +1,5 @@
-import subprocess
-import os.path
 import inspect
+import os.path
 
 
 class Limit:
@@ -8,6 +7,7 @@ class Limit:
         a range. Upper and lower bound inclusive.
 
         Usage: create a limit with l = Limit(lower=10).
+            >>> l = Limit(lower=10).
             >>> 5 in l == False
             >>> 50 in l == True
     '''

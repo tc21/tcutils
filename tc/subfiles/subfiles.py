@@ -1,8 +1,9 @@
 """ This file defines the subfiles_get class and its extensions, which
     provide iteration functionality subfiles and subfolders """
 import os
+from typing import Callable, Generic, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union
+
 from tc.utils import Limit
-from typing import Callable, Iterable, Tuple, List, Optional, TypeVar, Iterator, Generic, Any
 
 # note: the complicated typing structure is for mypy. as the programmer, is doesn't really give us any information.
 T = TypeVar('T')
@@ -35,9 +36,9 @@ class subfiles_get(Generic[T], Iterable[T]):
     walk: Iterable[WalkNode]
     filter_func: Optional[Callable[..., bool]]
 
-    def __init__(self, root: str=os.path.curdir,
-                 depth=Limit(), limit=None, filter=None, sort=None,
-                 topdown=True):
+    def __init__(self, root: str = os.path.curdir,
+                 depth: Union[int, Tuple[int, int], Limit, range] = Limit(),
+                 limit=None, filter=None, sort=None, topdown=True):
         self.root = os.path.abspath(root)
 
         if type(depth) == int:
@@ -125,7 +126,7 @@ class subfiles_map(Generic[T], subfiles_get[T]):
 
         Only intended to be subclassed.
     """
-    def __init__(self, root: str=os.path.curdir, func=None, **kwargs):
+    def __init__(self, root: str = os.path.curdir, func=None, **kwargs):
         if func is None:
             raise TypeError('expected function, got None')
         super().__init__(root=root, **kwargs)

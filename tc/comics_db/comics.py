@@ -1,21 +1,19 @@
 from __future__ import annotations
 
+import datetime
+import json
 import os
+import random
 import re
 import subprocess
-import tc.sqlite.manager as tcsql
-import tc.subfiles
-import random
-import json
-import datetime
-
 from collections import Counter
-from dataclasses import dataclass
-from natsort import natsorted
-from tc.sqlite.manager import connect, question_marks
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from xml.etree import ElementTree
 
-from typing import List, Optional, Tuple, Dict, Iterable, Any
+from natsort import natsorted
+
+import tc.sqlite.manager as tcsql
+import tc.subfiles
 
 
 class _Profile:
@@ -84,7 +82,7 @@ class ReadOnlyProfile(_Profile):
             json.get('ImageWidth', 240)
         )
 
-        self.extensions = json.get('FileExtensions', ['.jpg','.jpeg','.png','.tiff','.bmp','.gif'])
+        self.extensions = json.get('FileExtensions', ['.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif'])
 
         # these properties are deprecated, but they're here to make ComicsManager work
         self.work_traversal_depth = 2
@@ -228,7 +226,8 @@ class ReadOnlyManager:
         return self.get_files_from_folder(comic.folder)
 
     def get_files_from_folder(self, path: str) -> List[str]:
-        return list(tc.subfiles.get_elements(path,
+        return list(tc.subfiles.get_elements(
+            path,
             depth=self.profile.work_traversal_depth,
             filter=lambda f: f.endswith(tuple(self.profile.extensions)),
             sort=natsorted
@@ -274,16 +273,16 @@ class Comic:
 
     def get_sort_key(self, primary_key: str) -> Iterable[Any]:
         if primary_key == 'title':
-            return (self.display_title.lower(), self.author.lower())
+            return self.display_title.lower(), self.author.lower()
         if primary_key == 'category':
-            return (self.category.lower(), self.author.lower(), self.display_title.lower())
+            return self.category.lower(), self.author.lower(), self.display_title.lower()
         if primary_key == 'random':
-            return (random.random(),)
+            return random.random(),
         if primary_key == 'date added':
             dt = datetime.datetime.strptime(self.date_added, '%Y-%m-%d')
-            return (-dt.toordinal(), self.author.lower(), self.display_title.lower())
+            return -dt.toordinal(), self.author.lower(), self.display_title.lower()
 
-        return (self.author.lower(), self.display_title.lower())
+        return self.author.lower(), self.display_title.lower()
 
 
 class MissingTagError(Exception):

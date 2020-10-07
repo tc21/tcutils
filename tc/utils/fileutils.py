@@ -1,13 +1,14 @@
+import fnmatch
 import os
 import re
-import typing.re
-import tc.subfiles
-import fnmatch
 import sys
+from typing import Any, Iterable, List
+
+import typing.re
 from natsort import natsorted
 from send2trash import send2trash
 
-from typing import List, Any, Iterable
+import tc.subfiles
 
 
 def filesize_format(s: float, readable=True) -> Any:
@@ -49,8 +50,8 @@ def filesize(file_or_dir: str, recursive=False, diskspace=False, return_data=Non
 
     total = 0
 
-    for f in tc.subfiles.get_elements(file_or_dir, filter=os.path.isfile):
-        stat = os.stat(file_or_dir, follow_symlinks=False)
+    for filename in tc.subfiles.get_elements(file_or_dir, filter=os.path.isfile):
+        stat = os.stat(filename, follow_symlinks=False)
         total += stat.st_size
     return total
 
@@ -79,6 +80,8 @@ def print_filesize(file_or_dir: str, recursive=False, verbose=False,
     if verbose:
         print('\nSUMMARY')
 
+    # todo implement
+    _ = levels, readable
     raise NotImplementedError('Recursive Scanning not yet implemented!')
 
 
@@ -88,7 +91,7 @@ def find(root=os.path.curdir, pattern=None, mode='fnmatch', use_full_name=False)
 
     if pattern is None or pattern == '':
         search_function = lambda _: True
-    if type(pattern) is str and (mode is None or mode == ''):
+    elif type(pattern) is str and (mode is None or mode == ''):
         search_function = lambda p: p in pattern
     elif type(pattern) is str and mode == 'fnmatch':
         regex = re.compile(fnmatch.translate(pattern))
@@ -172,8 +175,6 @@ def explode(folder: str):
         raise ValueError(f'{folder} is not a valid directory')
 
     folder = os.path.abspath(folder)
-
-    files = os.listdir(folder)
     parent, _ = os.path.split(folder)
 
     for filename in os.listdir(folder):
@@ -255,7 +256,8 @@ def move(
     if os.path.normpath(os.path.normcase(file_or_folder)) == os.path.normpath(os.path.normcase(target_name)):
         return file_or_folder
 
-    target_name = alternative_filename(target_name)
+    if auto_rename:
+        target_name = alternative_filename(target_name)
 
     if makedirs and not os.path.exists(os.path.dirname(target_name)):
         os.makedirs(os.path.dirname(target_name))
@@ -311,7 +313,7 @@ def order(folder=os.path.curdir, start=0, filter=None, mode='replace', format_st
 
     for source, target in rename_queue:
         final_name = move(source, folder=folder, filename=target)
-        if os.path.basename(target) != target:
+        if os.path.basename(final_name) != target:
             print('warning: final name does not match predicted name!', file=sys.stderr)
 
 
@@ -336,7 +338,7 @@ def sanitize_filename(
         for character in key:
             filename = filename.replace(character, value)
 
-    sanitized = re.sub(r'[\\/:*?\"<>|]', '_', filename)
+    sanitized = re.sub(r'[\\/:*?\"<>|]', replace_with, filename)
     if len(filename) > _win_fn_max:
         base, ext = os.path.splitext(sanitized)
         base = base[:_win_fn_max-(len(ext)+3)] + '...'

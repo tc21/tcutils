@@ -1,11 +1,12 @@
 ''' This file defines functions used to organize an existing folder. '''
-import tc.subfiles
-from .webinterface import get_info as uncached_get_info
-from .caching import cached_get_info
 import os
 import re
-from typing import Union, Optional, List, Callable, Dict, Any
+from typing import List, Optional, Union
+
+import tc.subfiles
 import tc.utils
+from .caching import cached_get_info
+from .webinterface import get_info as uncached_get_info
 
 def rj_folder(pathname: str) -> bool:
     ''' Given a pathname, returns `True` if the path contains a root file named
@@ -25,10 +26,10 @@ def get_number(pathname: str) -> str:
 
 # main logic
 
-def organize(root_dir: str=os.path.curdir,
-             caching: bool=True,
-             info_file: Optional[str]='dlsite.txt',
-             download_artwork: Union[str, bool]='auto'):
+def organize(root_dir: str = os.path.curdir,
+             caching: bool = True,
+             info_file: Optional[str] = 'dlsite.txt',
+             download_artwork: Union[str, bool] = 'auto'):
     '''
     download_artwork: if 'auto', downloads artwork if:
         there are no artwork equivalent to False if using cached info, and True if otherwise
@@ -125,6 +126,9 @@ def download_file(url: str, *,
         if os.path.dirname(name) != '':
             raise ValueError('name cannot contain path separators when folder is provided')
         target_name = os.path.join(folder, name)
+
+    if not auto_rename and os.path.exists(target_name):
+        raise FileExistsError(target_name)
 
     target_name = tc.utils.alternative_filename(target_name)
 
