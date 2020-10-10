@@ -14,6 +14,8 @@ from natsort import natsorted
 
 import tc.sqlite.manager as tcsql
 import tc.subfiles
+from tc.comics import Comic
+from tc.comics_db.text_search import compile_search
 
 
 class _Profile:
@@ -101,6 +103,16 @@ class ReadOnlyManager:
         self.thumbnail_folder = thumbnail_folder
         self.library_path = library_path
 
+    SearchResult = Tuple[List[Comic], Dict[str, int], Dict[str, int], Dict[str, int]]
+
+    def text_search(self, search_string: str) -> SearchResult:
+        search, categories, authors, tags, loved = compile_search(search_string)
+
+        search_string = search[0] if len(search) > 0 else None
+        loved_only = (loved is True)
+
+        return self.search_comics(search_string, categories, authors, tags, loved_only)
+
     def search_comics(
         self,
         search_string: Optional[str] = None,
@@ -108,7 +120,7 @@ class ReadOnlyManager:
         authors: List[str] = [],
         tags: List[str] = [],
         loved_only=False
-    ) -> Tuple[List[Comic], Dict[str, int], Dict[str, int], Dict[str, int]]:
+    ) -> SearchResult:
         ''' returns a 4-tuple ([comics], {category_name: id}, {author_name: id}, {tag_name: id})
             Note that authors, tags, categories need to be exact matches, but search string doesn't.'''
         with tcsql.connect(self.library_path) as manager:
