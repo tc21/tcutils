@@ -14,7 +14,6 @@ from natsort import natsorted
 
 import tc.sqlite.manager as tcsql
 import tc.subfiles
-from tc.comics import Comic
 from tc.comics_db.text_search import compile_search
 
 
@@ -103,15 +102,28 @@ class ReadOnlyManager:
         self.thumbnail_folder = thumbnail_folder
         self.library_path = library_path
 
-    SearchResult = Tuple[List[Comic], Dict[str, int], Dict[str, int], Dict[str, int]]
+    SearchResult = Tuple[List['Comic'], Dict[str, int], Dict[str, int], Dict[str, int]]
 
-    def text_search(self, search_string: str) -> SearchResult:
-        search, categories, authors, tags, loved = compile_search(search_string)
+    def text_search(
+        self,
+        search_string: str,
+        override_categories: Optional[List[str]] = None,
+        override_authors: Optional[List[str]] = None,
+        override_tags: Optional[List[str]] = None,
+        override_playlists: Optional[List[str]] = None
+    ) -> SearchResult:
+        ''' The overrides serve the comics_db webapp for now. Perhaps we should figure out a better way. '''
+        search, categories, authors, tags, playlists, loved = compile_search(search_string)
 
         search_string = search[0] if len(search) > 0 else None
         loved_only = (loved is True)
 
-        return self.search_comics(search_string, categories, authors, tags, loved_only)
+        categories = override_categories or categories
+        authors = override_authors or authors
+        tags = override_tags or tags
+        playlists = override_playlists or playlists
+
+        return self.search_comics(search_string, categories, authors, tags, playlists, loved_only)
 
     def search_comics(
         self,
@@ -119,6 +131,7 @@ class ReadOnlyManager:
         categories: List[str] = [],
         authors: List[str] = [],
         tags: List[str] = [],
+        playlists: List[str] = [],
         loved_only=False
     ) -> SearchResult:
         ''' returns a 4-tuple ([comics], {category_name: id}, {author_name: id}, {tag_name: id})
@@ -135,17 +148,23 @@ class ReadOnlyManager:
                     comics.display_title,
                     comics.loved,
                     comics.date_added,
-                    group_concat(tags.name)
+                    group_concat(tags.name),
+                    group_concat(playlists.name)
                 FROM
                     comics
                 LEFT OUTER JOIN
                     comic_tags ON comic_tags.comicid = comics.rowid
                 LEFT OUTER JOIN
                     tags ON tags.rowid = comic_tags.tagid
+                LEFT OUTER JOIN
+                    playlist_items ON playlist_items.comicid = comics.rowid
+                LEFT OUTER JOIN
+                    playlists ON playlists.rowid = playlist_items.playlistid
                 WHERE
             {     f'comics.category IN {tcsql.question_marks(len(categories))} AND ' if categories != [] else '' }
             {     f'comics.author IN {tcsql.question_marks(len(authors))} AND ' if authors != [] else '' }
             {     f'tags.name IN {tcsql.question_marks(len(tags))} AND ' if tags != [] else ''}
+            {     f'playlists.name IN {tcsql.question_marks(len(playlists))} AND ' if playlists != [] else ''}
             {      'loved = 1 AND ' if loved_only else '' }
             {   '''(comics.display_title COLLATE UTF8_GENERAL_CI LIKE ? OR
                         comics.author COLLATE UTF8_GENERAL_CI LIKE ? OR
@@ -155,7 +174,7 @@ class ReadOnlyManager:
                 GROUP BY comics.rowid
             """
 
-            arguments = categories + authors + tags
+            arguments = categories + authors + tags + playlists
             if search_string is not None:
                 arguments += [f'%{search_string}%', f'%{search_string}%', search_string]
 
@@ -167,10 +186,11 @@ class ReadOnlyManager:
             tag_dict: Counter = Counter()
 
             # for rowid, *row in result:
-            for rowid, *data, tag_string in result:
+            for rowid, *data, tag_string, playlist_string in result:
                 assert len(data) == 8
-                tags = tag_string.split(',') if tag_string is not None else []
-                comic = Comic(data, tags, rowid)
+                tags = sorted(set(tag_string.split(','))) if tag_string is not None else []
+                playlists = sorted(set(playlist_string.split(','))) if playlist_string is not None else []
+                comic = Comic(data, tags, playlists, rowid)
 
                 # comic = Comic(row, [], rowid)
                 # comics.append(comic)
@@ -192,7 +212,7 @@ class ReadOnlyManager:
                     FROM comics WHERE rowid = {rowid}''')
             if len(result) == 0:
                 return None
-            return Comic(result[0], self._get_tags(rowid), rowid)
+            return Comic(result[0], self._get_tags(rowid), self._get_playlists(rowid), rowid)
 
     def _get_tags(self, comic_rowid: int) -> List[str]:
         with tcsql.connect(self.library_path) as manager:
@@ -201,6 +221,16 @@ class ReadOnlyManager:
                     FROM tags
                     JOIN comic_tags ON tags.rowid = comic_tags.tagid
                     WHERE comic_tags.comicid = {comic_rowid}
+            ''')
+            return [t[0] for t in tags]
+
+    def _get_playlists(self, comic_rowid: int) -> List[str]:
+        with tcsql.connect(self.library_path) as manager:
+            tags = manager.execute(f'''
+                SELECT playlists.name
+                    FROM playlists
+                    JOIN playlist_items ON playlists.rowid = playlist_items.playlistid
+                    WHERE playlist_items.comicid = {comic_rowid}
             ''')
             return [t[0] for t in tags]
 
@@ -268,7 +298,7 @@ class ReadOnlyManager:
 
 
 class Comic:
-    def __init__(self, data: List[str], tags: List[str], comicid: int):
+    def __init__(self, data: List[str], tags: List[str], playlists: List[str], comicid: int):
         self.comicid = comicid
         self.folder = data[0]
         self.unique_name = data[1]
@@ -279,6 +309,7 @@ class Comic:
         self.loved = data[6] == 1
         self.date_added = data[7][:10]
         self.tags = tags
+        self.playlists = playlists
 
     def __repr__(self):
         return f'<Comic {repr(self.unique_name)}>'

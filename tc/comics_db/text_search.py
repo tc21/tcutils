@@ -11,13 +11,14 @@ class ParserMode(Enum):
     StringEnd = auto()
     Argument = auto()
 
-def compile_search(search_term: str) -> Tuple[List[str], List[str], List[str], List[str], Optional[bool]]:
+def compile_search(search_term: str) -> Tuple[List[str], List[str], List[str], List[str], List[str], Optional[bool]]:
     tokens, _ = split_tokens(search_term, correct_errors=True)
 
     names = []
     authors = []
     categories = []
     tags = []
+    playlists = []
     loved = None
 
     for key, value in tokens:
@@ -30,6 +31,8 @@ def compile_search(search_term: str) -> Tuple[List[str], List[str], List[str], L
             categories.append(value)
         elif key == 'tag':
             tags.append(value)
+        elif key == 'playlist':
+            playlists.append(value)
         elif key == 'loved':
             if value.lower().startswith('t'):
                 loved = True
@@ -37,7 +40,7 @@ def compile_search(search_term: str) -> Tuple[List[str], List[str], List[str], L
             # we won't throw an error, we'll just let it search
             names.append(value)
 
-    return names, authors, categories, tags, loved
+    return names, authors, categories, tags, playlists, loved
 
 
 def split_tokens(search_term: str, correct_errors=False) -> SplitTokensResult:
