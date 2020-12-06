@@ -36,9 +36,12 @@ _auxiliary_info: List[Tuple[str, str, str]] = [
     (_voice, _voice_table, _voice),
 ]
 
-def cached_get_info(code: str, reset_cached=False) -> Dict[str, Any]:
+def cached_get_info(code: str, reset_cached=False, offline=False) -> Optional[Dict[str, Any]]:
     result = fetch_info(code)
     if reset_cached or result is None:
+        if offline:
+            return None
+
         info = webinterface.get_info(code)
         if info:
             update = result is not None

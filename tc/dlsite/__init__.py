@@ -6,7 +6,7 @@ from .organizer import organize
 
 from typing import Union
 
-def get_info(rj_number: Union[int, str], caching=True, update=False):
+def get_info(rj_number: Union[int, str], caching=True, update=False, offline=False):
     '''
     ```
     {
@@ -28,7 +28,11 @@ def get_info(rj_number: Union[int, str], caching=True, update=False):
     rj_code = _formalize(rj_number)
 
     if caching:
-        return _cached_get_info(rj_code, update)
+        return _cached_get_info(rj_code, update, offline)
+
+    if offline:
+        raise ValueError('cannot run in offline mode if caching is disabled')
+
     return _get_info(rj_code)
 
 
