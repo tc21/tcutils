@@ -37,6 +37,40 @@ def print_dict(d: dict):
     print(format_dict(d))
 
 
+def format_list(l: list) -> str:
+    if len(l) <= 1:
+        return repr(l)
+
+    fold_at = 78
+    single_line_at = 18
+
+    reprs = [repr(x) for x in l]
+
+    if max(map(len, reprs)) > single_line_at:
+        lines = reprs
+    else:
+        lines = [reprs[0]]
+
+        for x in reprs[1:]:
+            if len(lines[-1]) + len(x) > fold_at - 2:
+                lines.append(x)
+            else:
+                lines[-1] += ', ' + x
+
+    if len(lines) == 1:
+        return '[' + lines[0] + ']'
+
+    return (
+        '[' + lines[0] + ',\n' +
+        ''.join(' ' + x + ',\n' for x in lines[1:-1]) +
+        ' ' + lines[-1] + ']'
+    )
+
+
+def print_list(l: list):
+    print(format_list(l))
+
+
 def format_table(
     t: List[List[Any]],
     max_width: Optional[Union[int, List[int]]] = None,

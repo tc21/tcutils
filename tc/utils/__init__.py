@@ -10,7 +10,8 @@ from .images import (
     waifu2x, image_size, upconvert
 )
 from .format import (
-    format_dict, format_table, print_dict, print_table, shorten as shorten_string, is_cjk_fullwidth, color
+    format_dict, format_table, format_list, print_dict, print_table, print_list,
+    shorten as shorten_string, is_cjk_fullwidth, color
 )
 from .avutils import (
     convert, convert_video, split as split_video
