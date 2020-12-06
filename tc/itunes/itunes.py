@@ -8,7 +8,7 @@ import ctypes
 import sys
 import pickle
 import os.path
-from typing import List, Generator, Callable
+from typing import List, Generator, Callable, Optional
 from dataclasses import dataclass
 
 
@@ -32,7 +32,7 @@ class iTunes:
     def __init__(self):
         self.itunes = _get_itunes()
 
-    def search(self, text: str, search_field = _ITPlaylistSearchFieldVisible) -> iTunesObjectCollection:
+    def search(self, text: str, search_field = _ITPlaylistSearchFieldVisible) -> Optional[iTunesObjectCollection]:
         collection = self.itunes.LibraryPlaylist.Search(text, search_field)
 
         if collection is None:
@@ -40,22 +40,22 @@ class iTunes:
 
         return iTunesObjectCollection(collection)
 
-    def search_all(self, text: str) -> iTunesObjectCollection:
+    def search_all(self, text: str) -> Optional[iTunesObjectCollection]:
         return self.search(text, _ITPlaylistSearchFieldAll)
 
-    def search_visible(self, text: str) -> iTunesObjectCollection:
+    def search_visible(self, text: str) -> Optional[iTunesObjectCollection]:
         return self.search(text, _ITPlaylistSearchFieldVisible)
 
-    def search_artists(self, text: str) -> iTunesObjectCollection:
+    def search_artists(self, text: str) -> Optional[iTunesObjectCollection]:
         return self.search(text, _ITPlaylistSearchFieldArtists)
 
-    def search_albums(self, text: str) -> iTunesObjectCollection:
+    def search_albums(self, text: str) -> Optional[iTunesObjectCollection]:
         return self.search(text, _ITPlaylistSearchFieldAlbums)
 
-    def search_composers(self, text: str) -> iTunesObjectCollection:
+    def search_composers(self, text: str) -> Optional[iTunesObjectCollection]:
         return self.search(text, _ITPlaylistSearchFieldComposers)
 
-    def search_songs(self, text: str) -> iTunesObjectCollection:
+    def search_songs(self, text: str) -> Optional[iTunesObjectCollection]:
         return self.search(text, _ITPlaylistSearchFieldSongNames)
 
     @property
@@ -63,10 +63,12 @@ class iTunes:
         collection = self.itunes.LibrarySource.Playlists
         return iTunesPlaylistCollection(collection)
 
-    def get_playlist(self, name: str) -> iTunesPlaylist:
+    def get_playlist(self, name: str) -> Optional[iTunesPlaylist]:
         for playlist in self.playlists:
             if playlist.name.lower() == name.lower():
                 return playlist
+
+        return None
 
     def current_song(self) -> Optional[iTunesTrack]:
         track = self.itunes.CurrentTrack

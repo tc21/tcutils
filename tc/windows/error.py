@@ -1,13 +1,13 @@
 import sys
 import warnings
 
-from typing import Dict, Tuple, Literal, NamedTuple
+from typing import Dict, Optional, Tuple, Literal, NamedTuple
 
 
 class WinErrorSpecification(NamedTuple):
     type: Literal['success', 'warning', 'info', 'error']
     name: str
-    message: str = None
+    message: Optional[str] = None
 
 
 class WinError(Exception):

@@ -37,13 +37,13 @@ class subfiles_get(Generic[T], Iterable[T]):
     filter_func: Optional[Callable[..., bool]]
 
     def __init__(self, root: str = os.path.curdir,
-                 depth: Union[int, Tuple[int, int], Limit, range] = Limit(),
+                 depth: Union[int, Tuple[int, int], Tuple[int, int, int], Limit, range] = Limit(),
                  limit=None, filter=None, sort=None, topdown=True):
         self.root = os.path.abspath(root)
 
-        if type(depth) == int:
-            depth_range = range(depth + 1)
-        elif type(depth) == tuple:
+        if isinstance(depth, int):
+            depth_range: Union[Limit, range] = range(depth + 1)
+        elif isinstance(depth, tuple):
             if len(depth) >= 2:
                 l, r, *s = depth
                 depth_range = range(l, r + 1, *s)

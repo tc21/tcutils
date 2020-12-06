@@ -1,8 +1,9 @@
 import secrets
 import string
+from typing import Callable, Dict, Optional, Tuple, Union
 
 
-def auto_generate_password(style='apple', length=None):
+def auto_generate_password(style: str='apple', length: Optional[int]=None) -> str:
     if style in builtin_styles:
         proposed_length, get_set = builtin_styles[style]
     else:
@@ -18,7 +19,10 @@ def roll_one_in_n(n: int) -> bool:
     return secrets.randbelow(n) == 0
 
 
-def apple_get_set(length: int, up_until_now: str) -> str:
+GetSetFunc = Callable[[Optional[int], str], Optional[str]]
+GetSet = Union[str, GetSetFunc]
+
+def apple_get_set(length: Optional[int], up_until_now: str) -> Optional[str]:
     default_set = 'bcdfghjklmnpqrstvwxz'
     uppercase_set = 'BCDFGHJKLMNPQRSTVWXZ'
     vowels_set = 'aeiouy'
@@ -66,7 +70,10 @@ def apple_get_set(length: int, up_until_now: str) -> str:
     return uppercase_set if uppercase else default_set
 
 
-def generate_password(length=18, get_set=string.ascii_lowercase):
+def generate_password(
+    length: Optional[int]=18,
+    get_set: GetSet=string.ascii_lowercase
+):
     try:
         if callable(get_set):
             x = get_set(length, '')
@@ -74,11 +81,11 @@ def generate_password(length=18, get_set=string.ascii_lowercase):
             x = get_set
             if length is None:
                 raise TypeError('length cannot be None when get_set is not a function')
-        assert type(secrets.choice(x)) == str
+        assert x is not None and type(secrets.choice(x)) == str
     except (TypeError, AssertionError):
         raise TypeError('get_set must be a str or Callable[[int, str], str]')
 
-    def get_character_set(total_length, up_until_now):
+    def get_character_set(total_length, up_until_now) -> Optional[str]:
         if callable(get_set):
             return get_set(total_length, up_until_now)
         else:
@@ -91,7 +98,7 @@ def generate_password(length=18, get_set=string.ascii_lowercase):
             break
 
         next_character_set = get_character_set(length, current_password)
-        if next_character_set is None:
+        if next_character_set is None or next_character_set == '':
             if length is None:
                 break
             raise ValueError(f'failed to generate a password of len {length} (stopped after {len(current_password)} characters)!')
@@ -104,8 +111,8 @@ def generate_password(length=18, get_set=string.ascii_lowercase):
 
 
 def generate_static_password(
-    effective_length=18, segment_separator='-', segment_length=6,
-    default_set=string.ascii_lowercase, extra_sets=dict()
+    effective_length: int=18, segment_separator: str='-', segment_length: int=6,
+    default_set: str=string.ascii_lowercase, extra_sets: Dict[str, int]=dict()
 ):
     '''
     `effective_length` number of effective (non-separator) characters in the
@@ -160,7 +167,7 @@ def generate_static_password(
     return segment_separator.join(segments)
 
 
-builtin_styles = {
+builtin_styles: Dict[str, Tuple[Optional[int], GetSet]] = {
     'apple': (None, apple_get_set),
     'lastpass': (16, string.ascii_letters + string.digits + '!#$%&*@^')
 }
