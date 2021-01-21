@@ -120,7 +120,7 @@ class subfiles_get(Generic[T], Iterable[T]):
         return True
 
 
-class subfiles_map(Generic[T], subfiles_get[T]):
+class subfiles_map(subfiles_get[T]):
     """ A class extension providing mapping ability to get_x classes.
         Works basically like python's map.
 
