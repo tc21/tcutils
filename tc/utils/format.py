@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Union
 
 
 def format_dict(d: dict) -> str:
@@ -72,9 +72,9 @@ def print_list(l: list):
 
 
 def format_table(
-    t: List[List[Any]],
-    max_width: Optional[Union[int, List[int]]] = None,
-    spacing: Union[int, List[int]] = 1
+    t: list[list[Any]],
+    max_width: Optional[Union[int, list[int]]] = None,
+    spacing: Union[int, list[int]] = 1
 ) -> str:
     '''
     Formats a table (a 'list of lists') with a format similar to,
@@ -136,9 +136,9 @@ def format_table(
 
 
 def print_table(
-    t: List[List[Any]],
-    max_width: Optional[Union[int, List[int]]] = None,
-    spacing: Union[int, List[int]] = 1
+    t: list[list[Any]],
+    max_width: Optional[Union[int, list[int]]] = None,
+    spacing: Union[int, list[int]] = 1
 ):
     print(format_table(t, max_width, spacing))
 
@@ -228,7 +228,7 @@ def is_cjk_fullwidth(char: str, check_fully=False):
         (0x20000, 0x2a6df), (0x2a700, 0x2ceaf), (0x2f800, 0x2fa1f)
     )
 
-    cp: Sequence[Tuple[int, int]] = __cjk_reduced_codepoints
+    cp: Sequence[tuple[int, int]] = __cjk_reduced_codepoints
 
     if check_fully:
         cp = __cjk_codepoints

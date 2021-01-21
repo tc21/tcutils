@@ -1,13 +1,13 @@
 """ This file defines the subfiles_get class and its extensions, which
     provide iteration functionality subfiles and subfolders """
 import os
-from typing import Callable, Generic, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union
+from typing import Callable, Generic, Iterable, Iterator, Optional, TypeVar, Union
 
 from tc.utils import Limit
 
 # note: the complicated typing structure is for mypy. as the programmer, is doesn't really give us any information.
 T = TypeVar('T')
-WalkNode = Tuple[str, List[str], List[str]]
+WalkNode = tuple[str, list[str], list[str]]
 
 class subfiles_get(Generic[T], Iterable[T]):
     """ Root class for get_x.
@@ -37,7 +37,7 @@ class subfiles_get(Generic[T], Iterable[T]):
     filter_func: Optional[Callable[..., bool]]
 
     def __init__(self, root: str = os.path.curdir,
-                 depth: Union[int, Tuple[int, int], Tuple[int, int, int], Limit, range] = Limit(),
+                 depth: Union[int, tuple[int, int], tuple[int, int, int], Limit, range] = Limit(),
                  limit=None, filter=None, sort=None, topdown=True):
         self.root = os.path.abspath(root)
 

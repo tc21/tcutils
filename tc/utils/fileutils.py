@@ -2,9 +2,8 @@ import fnmatch
 import os
 import re
 import sys
-from typing import Any, Iterable, List
+from typing import Any, Iterable, Pattern
 
-import typing.re
 from natsort import natsorted
 from send2trash import send2trash
 
@@ -99,7 +98,7 @@ def find(root=os.path.curdir, pattern=None, mode='fnmatch', use_full_name=False)
     elif type(pattern) is str and mode == 'regex':
         regex = re.compile(pattern)
         search_function = lambda p: regex.search(p) is not None
-    elif isinstance(pattern, typing.re.Pattern):
+    elif isinstance(pattern, Pattern):
         search_function = lambda p: pattern.search(p) is not None
     else:
         raise ValueError('Invalid pattern and mode combination')
@@ -317,7 +316,7 @@ def order(folder=os.path.curdir, start=0, filter=None, mode='replace', format_st
             print('warning: final name does not match predicted name!', file=sys.stderr)
 
 
-def listdir(path=os.path.curdir) -> List[str]:
+def listdir(path=os.path.curdir) -> list[str]:
     return natsorted(os.listdir(path))
 
 
