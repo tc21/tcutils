@@ -2,13 +2,11 @@
 from __future__ import annotations
 
 import win32com.client
-import win32ui
 import pythoncom
-import ctypes
-import sys
 import pickle
 import os.path
-from typing import List, Generator, Callable, Optional
+import psutil
+from typing import List, Generator, Optional
 from dataclasses import dataclass
 
 
@@ -29,6 +27,13 @@ _ITPlaylistRepeatModeAll = 2
 
 
 class iTunes:
+    @classmethod
+    def connect(cls, start=False) -> Optional[iTunes]:
+        if not start and not _itunes_exists():
+            return None
+
+        return cls()
+
     def __init__(self):
         self.itunes = _get_itunes()
 
@@ -166,6 +171,15 @@ class iTunesTrack:
                 f'album={repr(self.album)}, genre={repr(self.genre)})')
 
 
+def _itunes_exists() -> bool:
+    for pid in psutil.pids():
+        process = psutil.Process(pid)
+        if process.name() == 'iTunes.exe':
+            return True
+
+    return False
+
+
 def _get_itunes() -> 'IiTunes':
     pythoncom.CoInitialize()
     itunes = win32com.client.Dispatch('iTunes.Application')
@@ -233,3 +247,6 @@ def play_first_with_lyrics(l: str) -> bool:
     songs = list(search_lyrics(l))
     if songs != []:
         songs[0].play()
+        return True
+
+    return False
