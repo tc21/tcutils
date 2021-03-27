@@ -167,6 +167,7 @@ class ReadOnlyManager:
             {     f'playlists.name IN {tcsql.question_marks(len(playlists))} AND ' if playlists != [] else ''}
             {      'loved = 1 AND ' if loved_only else '' }
             {   '''(comics.display_title COLLATE UTF8_GENERAL_CI LIKE ? OR
+                       (comics.display_title IS NULL AND comics.title COLLATE UTF8_GENERAL_CI LIKE ?) OR
                         comics.author COLLATE UTF8_GENERAL_CI LIKE ? OR
                         tags.name = ?) AND '''
                     if search_string is not None else '' }
@@ -176,7 +177,7 @@ class ReadOnlyManager:
 
             arguments = categories + authors + tags + playlists
             if search_string is not None:
-                arguments += [f'%{search_string}%', f'%{search_string}%', search_string]
+                arguments += [f'%{search_string}%'] * 3 + [search_string]
 
             result = manager.execute(query, arguments)
 
