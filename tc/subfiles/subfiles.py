@@ -2,6 +2,7 @@
     provide iteration functionality subfiles and subfolders """
 import os
 from typing import Callable, Generic, Iterable, Iterator, Optional, TypeVar, Union
+from natsort.natsort import natsorted
 
 from tc.utils import Limit
 
@@ -78,8 +79,11 @@ class subfiles_get(Generic[T], Iterable[T]):
                     # empty the list in-place; see documentation for os.walk for more information
                     dirnames[:] = []
 
+        def natural_walk():
+            for path, dirs, files in walk():
+                yield path, natsorted(dirs), natsorted(files)
 
-        self.walk = walk()
+        self.walk = natural_walk()
 
         self.filter_func = filter
 
