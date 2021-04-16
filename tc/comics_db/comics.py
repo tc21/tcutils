@@ -139,32 +139,27 @@ class ReadOnlyManager:
         with tcsql.connect(self.library_path) as manager:
             query = f"""
                 SELECT
-                    comics.rowid,
-                    comics.folder,
-                    comics.unique_name,
+                    comics.path,
+                    comics.unique_identifier,
                     comics.title,
                     comics.author,
                     comics.category,
                     comics.display_title,
                     comics.loved,
                     comics.date_added,
-                    group_concat(tags.name),
-                    group_concat(playlists.name)
+                    group_concat(comic_tags.tag),
+                    group_concat(playlist_items.playlist)
                 FROM
                     comics
                 LEFT OUTER JOIN
-                    comic_tags ON comic_tags.comicid = comics.rowid
+                    comic_tags ON comic_tags.comic = comics.unique_identifier
                 LEFT OUTER JOIN
-                    tags ON tags.rowid = comic_tags.tagid
-                LEFT OUTER JOIN
-                    playlist_items ON playlist_items.comicid = comics.rowid
-                LEFT OUTER JOIN
-                    playlists ON playlists.rowid = playlist_items.playlistid
+                    playlist_items ON playlist_items.comic = comics.unique_identifier
                 WHERE
             {     f'comics.category IN {tcsql.question_marks(len(categories))} AND ' if categories != [] else '' }
             {     f'comics.author IN {tcsql.question_marks(len(authors))} AND ' if authors != [] else '' }
-            {     f'tags.name IN {tcsql.question_marks(len(tags))} AND ' if tags != [] else ''}
-            {     f'playlists.name IN {tcsql.question_marks(len(playlists))} AND ' if playlists != [] else ''}
+            {     f'comic_tags.tag IN {tcsql.question_marks(len(tags))} AND ' if tags != [] else ''}
+            {     f'playlist_items.playlist IN {tcsql.question_marks(len(playlists))} AND ' if playlists != [] else ''}
             {      'loved = 1 AND ' if loved_only else '' }
             {   '''(comics.display_title COLLATE UTF8_GENERAL_CI LIKE ? OR
                        (comics.display_title IS NULL AND comics.title COLLATE UTF8_GENERAL_CI LIKE ?) OR
@@ -172,7 +167,7 @@ class ReadOnlyManager:
                         tags.name = ?) AND '''
                     if search_string is not None else '' }
                     active = 1
-                GROUP BY comics.rowid
+                GROUP BY comics.unique_identifier
             """
 
             arguments = categories + authors + tags + playlists
@@ -186,17 +181,12 @@ class ReadOnlyManager:
             author_dict: Counter = Counter()
             tag_dict: Counter = Counter()
 
-            # for rowid, *row in result:
-            for rowid, *data, tag_string, playlist_string in result:
+            for *data, tag_string, playlist_string in result:
                 assert len(data) == 8
                 tags = sorted(set(tag_string.split(','))) if tag_string is not None else []
                 playlists = sorted(set(playlist_string.split(','))) if playlist_string is not None else []
-                comic = Comic(data, tags, playlists, rowid)
+                comic = Comic(data, tags, playlists)
 
-                # comic = Comic(row, [], rowid)
-                # comics.append(comic)
-                # tags = self._get_tags(rowid)
-                # comic = Comic(row, tags, rowid)
                 comics.append(comic)
                 category_dict[comic.category] += 1
                 author_dict[comic.author] += 1
@@ -205,44 +195,43 @@ class ReadOnlyManager:
 
             return comics, category_dict, author_dict, tag_dict
 
-    def get_comic(self, rowid) -> Optional[Comic]:
+    def get_comic(self, unique_identifier: str) -> Optional[Comic]:
         with tcsql.connect(self.library_path) as manager:
             result = manager.execute(
-                f'''SELECT folder, unique_name, title, author, category,
+                f'''SELECT path, unique_identifier, title, author, category,
                            display_title, loved, date_added
-                    FROM comics WHERE rowid = {rowid}''')
+                    FROM comics WHERE unique_identifier = ?''',
+                [unique_identifier]
+            )
+
             if len(result) == 0:
                 return None
-            return Comic(result[0], self._get_tags(rowid), self._get_playlists(rowid), rowid)
 
-    def _get_tags(self, comic_rowid: int) -> List[str]:
+            return Comic(result[0], self._get_tags(unique_identifier), self._get_playlists(unique_identifier))
+
+    def _get_tags(self, unique_identifier: str) -> List[str]:
         with tcsql.connect(self.library_path) as manager:
-            tags = manager.execute(f'''
-                SELECT tags.name
-                    FROM tags
-                    JOIN comic_tags ON tags.rowid = comic_tags.tagid
-                    WHERE comic_tags.comicid = {comic_rowid}
-            ''')
+            tags = manager.execute(
+                f'SELECT tag FROM comic_tags WHERE comic = ?',
+                [unique_identifier]
+            )
+
             return [t[0] for t in tags]
 
-    def _get_playlists(self, comic_rowid: int) -> List[str]:
+    def _get_playlists(self, unique_identifier: str) -> List[str]:
         with tcsql.connect(self.library_path) as manager:
-            tags = manager.execute(f'''
-                SELECT playlists.name
-                    FROM playlists
-                    JOIN playlist_items ON playlists.rowid = playlist_items.playlistid
-                    WHERE playlist_items.comicid = {comic_rowid}
-            ''')
+            tags = manager.execute(
+                'SELECT playlist FROM playlist_items WHERE comic = ?',
+                [unique_identifier]
+            )
+
             return [t[0] for t in tags]
 
     def get_all_tags(self) -> Dict[str, int]:
         with tcsql.connect(self.library_path) as manager:
-            return dict(manager.execute('''
-                SELECT tags.name, COUNT(*)
-                    FROM comic_tags
-                    JOIN tags ON comic_tags.tagid = tags.rowid
-                    GROUP BY tagid
-            '''))
+            return dict(manager.execute(
+                'SELECT tag, COUNT(*) FROM comic_tags GROUP BY tag'
+            ))
 
     def get_all_authors(self) -> Dict[str, int]:
         with tcsql.connect(self.library_path) as manager:
@@ -259,14 +248,14 @@ class ReadOnlyManager:
     def get_subworks(self, comic: Comic) -> List[Tuple[str, str]]:
         ''' Returns a list of tuples (subwork_path, first_file_path) '''
         subworks = []
-        for path in tc.utils.listdir(comic.folder):
-            files = self.get_files_from_folder(os.path.join(comic.folder, path))
+        for path in tc.utils.listdir(comic.path):
+            files = self.get_files_from_folder(os.path.join(comic.path, path))
             if (len(files)) > 0:
                 subworks.append((path, files[0]))
         return subworks
 
     def get_files(self, comic: Comic) -> List[str]:
-        return self.get_files_from_folder(comic.folder)
+        return self.get_files_from_folder(comic.path)
 
     def get_files_from_folder(self, path: str) -> List[str]:
         return list(tc.subfiles.get_elements(
@@ -288,7 +277,7 @@ class ReadOnlyManager:
                 elif arg == '{all}':
                     args.extend(files)
                 elif arg == '{folder}':
-                    args.append(comic.folder)
+                    args.append(comic.path)
                 elif arg == '{firstname}':
                     args.append(os.path.basename(files[0]))
                 elif arg == '{allname}':
@@ -299,10 +288,9 @@ class ReadOnlyManager:
 
 
 class Comic:
-    def __init__(self, data: List[str], tags: List[str], playlists: List[str], comicid: int):
-        self.comicid = comicid
-        self.folder = data[0]
-        self.unique_name = data[1]
+    def __init__(self, data: List[str], tags: List[str], playlists: List[str]):
+        self.path = data[0]
+        self.unique_identifier = data[1]
         self.title = data[2]
         self.author = data[3]
         self.category = data[4]
@@ -313,7 +301,7 @@ class Comic:
         self.playlists = playlists
 
     def __repr__(self):
-        return f'<Comic {repr(self.unique_name)}>'
+        return f'<Comic {repr(self.unique_identifier)}>'
 
     def get_sort_key(self, primary_key: str) -> Iterable[Any]:
         if primary_key == 'title':
