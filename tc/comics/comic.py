@@ -5,6 +5,7 @@ import tc.utils
 from tc.utils.fileutils import surface, is_common_image as is_image
 from typing import Tuple, Optional, List
 import sys
+import unicodedata
 
 
 class Token:
@@ -60,7 +61,7 @@ class Comic:
         a raw `]` character.
         '''
         self.raw_name = raw_name
-        self.tokens, self.name = Comic.pop_tokens(raw_name)
+        self.tokens, self.name = Comic.pop_tokens(unicodedata.normalize('NFKC', raw_name))
         self.is_chinese = False
         self.author = None
 
