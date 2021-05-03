@@ -17,6 +17,35 @@ import tc.subfiles
 from tc.comics_db.text_search import compile_search
 
 
+class Comic:
+    def __init__(self, data: List[str], tags: List[str], playlists: List[str]):
+        self.path = data[0]
+        self.unique_identifier = data[1]
+        self.title = data[2]
+        self.author = data[3]
+        self.category = data[4]
+        self.display_title = data[5] or self.title
+        self.loved = data[6] == 1
+        self.date_added = data[7][:10]
+        self.tags = tags
+        self.playlists = playlists
+
+    def __repr__(self):
+        return f'<Comic {repr(self.unique_identifier)}>'
+
+    def get_sort_key(self, primary_key: str) -> Iterable[Any]:
+        if primary_key == 'title':
+            return self.display_title.lower(), self.author.lower()
+        if primary_key == 'category':
+            return self.category.lower(), self.author.lower(), self.display_title.lower()
+        if primary_key == 'random':
+            return random.random(),
+        if primary_key == 'date added':
+            dt = datetime.datetime.strptime(self.date_added, '%Y-%m-%d')
+            return -dt.toordinal(), self.author.lower(), self.display_title.lower()
+
+        return self.author.lower(), self.display_title.lower()
+
 class _Profile:
     name: str
     image_dimensions: Tuple[int, int]
@@ -91,18 +120,32 @@ class ReadOnlyProfile(_Profile):
         self.execution_arguments = []
 
 
+default_appdata = r'C:\Users\lanxia\AppData\Local\Packages\7417df09-6e90-4c8e-94f9-82950aaef08b_jh3a8zm8ky434\LocalState'
+
 class ReadOnlyManager:
     profile: _Profile
-    library_path: str
+    database_path: str
     thumbnail_folder: str
 
-    def __init__(self, profile: str, library_path: str,
+    def __init__(self, profile_path: str, database_path: str,
                  thumbnail_folder: str):
-        self.profile = ReadOnlyProfile.from_file(profile)
+        self.profile = ReadOnlyProfile.from_file(profile_path)
         self.thumbnail_folder = thumbnail_folder
-        self.library_path = library_path
+        self.database_path = database_path
 
-    SearchResult = Tuple[List['Comic'], Dict[str, int], Dict[str, int], Dict[str, int]]
+    @staticmethod
+    def try_open(profile_name: str, appdata: str = default_appdata) -> ReadOnlyManager:
+        profile_path = os.path.join(appdata, 'Profiles', f'{profile_name}.profile.json')
+        db_path = os.path.join(appdata, 'Databases', f'{profile_name}.library.db')
+        thumbnails_dir = os.path.join(appdata, 'Thumbnails')
+
+        if not (os.path.isfile(profile_path) and os.path.isfile(db_path) and os.path.isdir(thumbnails_dir)):
+            raise ValueError(f'Could not find profile {profile_name} in {appdata}')
+
+        return ReadOnlyManager(profile_path, db_path, thumbnails_dir)
+
+
+    SearchResult = Tuple[List[Comic], Dict[str, int], Dict[str, int], Dict[str, int]]
 
     def text_search(
         self,
@@ -136,7 +179,7 @@ class ReadOnlyManager:
     ) -> SearchResult:
         ''' returns a 4-tuple ([comics], {category_name: id}, {author_name: id}, {tag_name: id})
             Note that authors, tags, categories need to be exact matches, but search string doesn't.'''
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             query = f"""
                 SELECT
                     comics.path,
@@ -164,7 +207,7 @@ class ReadOnlyManager:
             {   '''(comics.display_title COLLATE UTF8_GENERAL_CI LIKE ? OR
                        (comics.display_title IS NULL AND comics.title COLLATE UTF8_GENERAL_CI LIKE ?) OR
                         comics.author COLLATE UTF8_GENERAL_CI LIKE ? OR
-                        tags.name = ?) AND '''
+                        comic_tags.tag = ?) AND '''
                     if search_string is not None else '' }
                     active = 1
                 GROUP BY comics.unique_identifier
@@ -196,7 +239,7 @@ class ReadOnlyManager:
             return comics, category_dict, author_dict, tag_dict
 
     def get_comic(self, unique_identifier: str) -> Optional[Comic]:
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             result = manager.execute(
                 f'''SELECT path, unique_identifier, title, author, category,
                            display_title, loved, date_added
@@ -210,7 +253,7 @@ class ReadOnlyManager:
             return Comic(result[0], self._get_tags(unique_identifier), self._get_playlists(unique_identifier))
 
     def _get_tags(self, unique_identifier: str) -> List[str]:
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             tags = manager.execute(
                 f'SELECT tag FROM comic_tags WHERE comic = ?',
                 [unique_identifier]
@@ -219,7 +262,7 @@ class ReadOnlyManager:
             return [t[0] for t in tags]
 
     def _get_playlists(self, unique_identifier: str) -> List[str]:
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             tags = manager.execute(
                 'SELECT playlist FROM playlist_items WHERE comic = ?',
                 [unique_identifier]
@@ -228,19 +271,19 @@ class ReadOnlyManager:
             return [t[0] for t in tags]
 
     def get_all_tags(self) -> Dict[str, int]:
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             return dict(manager.execute(
                 'SELECT tag, COUNT(*) FROM comic_tags GROUP BY tag'
             ))
 
     def get_all_authors(self) -> Dict[str, int]:
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             return dict(manager.execute(
                 'SELECT author, COUNT(*) FROM comics GROUP BY author'
             ))
 
     def get_all_categories(self) -> Dict[str, int]:
-        with tcsql.connect(self.library_path) as manager:
+        with tcsql.connect(self.database_path) as manager:
             return dict(manager.execute(
                 'SELECT category, COUNT(*) FROM comics GROUP BY category'
             ))
@@ -285,36 +328,6 @@ class ReadOnlyManager:
                 else:
                     args.append(arg)
             subprocess.Popen(args)
-
-
-class Comic:
-    def __init__(self, data: List[str], tags: List[str], playlists: List[str]):
-        self.path = data[0]
-        self.unique_identifier = data[1]
-        self.title = data[2]
-        self.author = data[3]
-        self.category = data[4]
-        self.display_title = data[5] or self.title
-        self.loved = data[6] == 1
-        self.date_added = data[7][:10]
-        self.tags = tags
-        self.playlists = playlists
-
-    def __repr__(self):
-        return f'<Comic {repr(self.unique_identifier)}>'
-
-    def get_sort_key(self, primary_key: str) -> Iterable[Any]:
-        if primary_key == 'title':
-            return self.display_title.lower(), self.author.lower()
-        if primary_key == 'category':
-            return self.category.lower(), self.author.lower(), self.display_title.lower()
-        if primary_key == 'random':
-            return random.random(),
-        if primary_key == 'date added':
-            dt = datetime.datetime.strptime(self.date_added, '%Y-%m-%d')
-            return -dt.toordinal(), self.author.lower(), self.display_title.lower()
-
-        return self.author.lower(), self.display_title.lower()
 
 
 class MissingTagError(Exception):
