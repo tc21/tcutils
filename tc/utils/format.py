@@ -16,9 +16,14 @@ def format_dict(d: dict) -> str:
     s = '{\n'
     for key, value in d.items():
         key_string = f'    {key}: '
-        s += (key_string +
-              ('\n' + ' ' * len(key_string)).join(str(value).split('\n')) +
-              '\n')
+
+        if isinstance(value, list):
+            value_string = format_list(value, indent=len(key_string))
+        else:
+            value_string = '\n'.join(' ' * len(key_string) + line for line in str(value).splitlines())
+
+
+        s += key_string + value_string.lstrip() + '\n'
     s += '}'
     return s
 
@@ -37,34 +42,33 @@ def print_dict(d: dict):
     print(format_dict(d))
 
 
-def format_list(l: list) -> str:
+def format_list(l: list, indent=0, fold_at=78, single_line_at=18) -> str:
     if len(l) <= 1:
         return repr(l)
 
-    fold_at = 78
-    single_line_at = 18
-
     reprs = [repr(x) for x in l]
 
-    if max(map(len, reprs)) > single_line_at:
+    if max(len(x) for x in reprs) > single_line_at:
         lines = reprs
     else:
         lines = [reprs[0]]
 
         for x in reprs[1:]:
-            if len(lines[-1]) + len(x) > fold_at - 2:
+            if len(lines[-1]) + len(x) > fold_at - indent - 2:
                 lines.append(x)
             else:
                 lines[-1] += ', ' + x
 
     if len(lines) == 1:
-        return '[' + lines[0] + ']'
+        lines = ['[' + lines[0] + ']']
+    else:
+        lines = [
+            '[' + lines[0] + ',',
+            *(' ' + x + ',' for x in lines[1:-1]),
+            ' ' + lines[-1] + ']'
+        ]
 
-    return (
-        '[' + lines[0] + ',\n' +
-        ''.join(' ' + x + ',\n' for x in lines[1:-1]) +
-        ' ' + lines[-1] + ']'
-    )
+    return '\n'.join(' ' * indent + line for line in lines)
 
 
 def print_list(l: list):
