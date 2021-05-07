@@ -120,7 +120,7 @@ class ReadOnlyProfile(_Profile):
         self.execution_arguments = []
 
 
-default_appdata = r'C:\Users\lanxia\AppData\Local\Packages\7417df09-6e90-4c8e-94f9-82950aaef08b_jh3a8zm8ky434\LocalState'
+default_appdata = os.path.expandvars(r'%LOCALAPPDATA%\Packages\7417df09-6e90-4c8e-94f9-82950aaef08b_jh3a8zm8ky434\LocalState')
 
 class ReadOnlyManager:
     profile: _Profile
